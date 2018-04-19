@@ -8,7 +8,8 @@ RMSE KNeighborsRegressor:  0.432209116004
 import glob, re
 import numpy as np
 import pandas as pd
-from sklearn import *
+from sklearn import metrics, ensemble, neighbors, preprocessing
+import lightgbm as lgb
 from datetime import datetime
 
 def RMSLE(y, pred):
@@ -107,17 +108,21 @@ col = [c for c in train if c not in ['id', 'air_store_id','visit_date','visitors
 train = train.fillna(-1)
 test = test.fillna(-1)
 
-
-model1 = ensemble.GradientBoostingRegressor(learning_rate=0.2)
-model2 = neighbors.KNeighborsRegressor(n_jobs=-1, n_neighbors=4)
-model1.fit(train[col], np.log1p(train['visitors'].values))
-model2.fit(train[col], np.log1p(train['visitors'].values))
-print('RMSE GradientBoostingRegressor: ', RMSLE(np.log1p(train['visitors'].values), model1.predict(train[col])))
-print('RMSE KNeighborsRegressor: ', RMSLE(np.log1p(train['visitors'].values), model2.predict(train[col])))
-test['visitors'] = (model1.predict(test[col]) + model2.predict(test[col])) / 2
+# model1 = ensemble.GradientBoostingRegressor(learning_rate=0.2)
+# model2 = neighbors.KNeighborsRegressor(n_jobs=-1, n_neighbors=4)
+model3 = lgb.LGBMRegressor(boosting_type="rf", n_estimators=200, learning_rate=0.1, bagging_fraction=0.9,
+    feature_fraction=0.9)
+# model1.fit(train[col], np.log1p(train['visitors'].values))
+# model2.fit(train[col], np.log1p(train['visitors'].values))
+model3.fit(train[col], np.log1p(train['visitors'].values))
+# print('RMSE GradientBoostingRegressor: ', RMSLE(np.log1p(train['visitors'].values), model1.predict(train[col])))
+# print('RMSE KNeightborsRegressor: ', RMSLE(np.log1p(train['visitors'].values), model1.predict(train[col])))
+print('RMSE LGBMRegressor: ', RMSLE(np.log1p(train['visitors'].values), model3.predict(train[col])))
+# test['visitors'] = (model1.predict(test[col]), model2.predict(test[col]), model3.predict(test[col])) / 3
+test['visitors'] = model3.predict(test[col])
 test['visitors'] = np.expm1(test['visitors']).clip(lower=0.)
 sub1 = test[['id','visitors']].copy()
-sub1[['id', 'visitors']].to_csv('submit1.csv', index=False)
+sub1[['id', 'visitors']].to_csv('data/submit1.csv', index=False)
 
 
 
